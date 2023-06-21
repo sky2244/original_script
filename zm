@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# compress only
+for target in "$@"; do
+    echo $target
+    target_path="${target%/}"
+
+    output_file="$target_path}.tar.gz"
+    if type "pigz" > /dev/null 2>&1; then
+        tar -cf "$output_file" --use-compress-prog=pigz "$target_path" --remove-files
+    else
+        tar -cf "$output_file" "$target_path" --remove-files
+    fi
+done

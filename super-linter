@@ -1,0 +1,41 @@
+#!/bin/bash
+
+FROM_BRANCH="${1:-master}"
+WORKDIR="/tmp/lint"
+target_env="--env RUN_LOCAL=true"
+
+# if want run log
+# target_env+=" --env CREATE_LOG_FILE=true --env LOG_FILE=./super-linter.log"
+
+# if set env file from workflow
+relative_git_root="."
+if !(git branch > /dev/null; 2>&1); then
+    relative_git_root=$(git rev-parse --show-cdup)
+
+    # pickup super-linter env from github workflow
+    for f in `find "{relative_git_root}/.github" -type f -name "*.yaml"`;
+    do
+        workflow=`python -c "import yaml,json; print(json.dumps(yaml.safe_load(open('$f')), indent=2))"`
+        d=`echo $workflow | jq -r '.jobs[]?.steps[]? | select(.uses != null) | select(.uses | startswith("github/super-linter")) | .env'`
+        for key in `echo "$d" | jq -r "keys | .[]"`;
+        do
+            if [ "$key" = "GITHUB_TOKEN" ]; then
+                continue
+            fi
+
+            value=`echo "$d" | jq ".$key"`
+            target_env+=" --env $key=$value"
+        done
+    done
+fi
+
+diff_files=$(git diff $FROM_BRANCH --name-only --line-prefix="" .)
+regex_include=$(echo $diff_files | tr " " "|")
+if [ -n "$regex_include" ]; then
+    target_env+=" --env FILTER_REGEX_INCLUDE=^${WORK_DIR}/(${regex_include})"
+else
+    echo nothing check file
+    exit 0
+fi
+
+docker run --rm $target_env -v ${PWD}/${relative_git_root}:${WORK_DIR} -w ${WORK_DIR} github/super-linter:v4

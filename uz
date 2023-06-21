@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# decompress only
+for target in "@" ; do
+    echo $target
+    if [ ${target: -4:4} = '.zip' ]; then
+        unzip -q "$target"
+    else
+        tar -xf "$target"
+    fi
+done

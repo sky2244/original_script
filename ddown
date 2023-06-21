@@ -1,0 +1,11 @@
+#!/bin/bash
+
+set -eu
+echo "container stop"
+docker ps -q | xargs -L 10 docker container stop > /dev/null
+
+echo "container prune"
+docker container prune -f > /dev/null
+
+echo "volume prune"
+docker volume prune -f > /dev/null
